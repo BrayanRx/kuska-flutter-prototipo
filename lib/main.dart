@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:kuska_prototipos/Screens/KuskaHomeScreen.dart';
+import 'package:kuska_prototipos/Screens/kuska_home_screen.dart';
 
 void main() {
   runApp(const MyApp());

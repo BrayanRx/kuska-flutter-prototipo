@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kuska_prototipos/product.dart';
+import 'package:kuska_prototipos/cart.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
 
-  const ProductDetailScreen({
-    super.key,
-    required this.product,
-  });
+  const ProductDetailScreen({super.key, required this.product});
 
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
@@ -22,9 +20,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void initState() {
     super.initState();
     _quantityKg = widget.product.minOrderKg;
-    _qtyController = TextEditingController(
-      text: _formatQty(_quantityKg),
-    );
+    _qtyController = TextEditingController(text: _formatQty(_quantityKg));
   }
 
   @override
@@ -59,7 +55,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       _quantityKg = newQty;
       _qtyController.value = _qtyController.value.copyWith(
         text: _formatQty(_quantityKg),
-        selection: TextSelection.collapsed(offset: _formatQty(_quantityKg).length),
+        selection: TextSelection.collapsed(
+          offset: _formatQty(_quantityKg).length,
+        ),
       );
     });
   }
@@ -92,10 +90,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         foregroundColor: Colors.black,
         title: Text(
           product.name,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
       ),
       body: SingleChildScrollView(
@@ -108,10 +103,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               borderRadius: BorderRadius.circular(24),
               child: AspectRatio(
                 aspectRatio: 4 / 3,
-                child: Image.asset(
-                  product.imageUrl,
-                  fit: BoxFit.cover,
-                ),
+                child: Image.asset(product.imageUrl, fit: BoxFit.cover),
               ),
             ),
             const SizedBox(height: 16),
@@ -182,13 +174,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         const SizedBox(height: 4),
                         const Text(
                           'Toca para ver el detalle S³',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.black54,
-                          ),
+                          style: TextStyle(fontSize: 12, color: Colors.black54),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
               ),
@@ -257,10 +246,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             const SizedBox(height: 8),
             Text(
               'Total: S/ ${total.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
 
@@ -270,13 +256,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   // Aquí, en el siguiente paso, usaremos Cart para guardar el pedido
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Añadido ${_formatQty(_quantityKg)} kg de ${product.name} (luego conectar canasta)',
-                      ),
-                    ),
-                  );
+                  final product = widget.product;
+
+                  // 1. Añadir al carrito en memoria
+                  Cart.instance.addProduct(product, _quantityKg);
+
+                  Navigator.of(context).pop();
+
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF002C28),
@@ -288,10 +274,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
                 child: const Text(
                   'Añadir a la canasta',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -478,18 +461,12 @@ class _S3DimensionCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            description,
-            style: const TextStyle(fontSize: 13),
-          ),
+          Text(description, style: const TextStyle(fontSize: 13)),
           const SizedBox(height: 10),
           for (final m in metrics) ...[
             Text(
               m,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 4),
           ],

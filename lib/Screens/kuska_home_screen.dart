@@ -3,6 +3,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kuska_prototipos/product.dart';
 import 'package:kuska_prototipos/Screens/product_detail_screen.dart';
+import 'package:kuska_prototipos/cart.dart';
+import 'package:kuska_prototipos/screens/cart_screen.dart';
+
 
 
 class KuskaHomeScreen extends StatefulWidget {
@@ -18,53 +21,13 @@ List<Product> productsFor(ProductCategory category) {
       .toList();
 }
 
+
 class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
   int _currentIndex = 0;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // por ahora sólo tenemos una pantalla, así que ignoramos _currentIndex
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          children: [
-            Text(
-              'Kuska',
-              style: GoogleFonts.libreBaskerville(
-                fontSize: 40,
-                fontWeight: FontWeight.w700,
-                height: 1.0,
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            const _SearchBar(),
-            const SizedBox(height: 28),
-
-            _SectionWithList(
-              title: 'Variedades de papa',
-              onSeeAll: () {},
-              products: productsFor(ProductCategory.papa),
-            ),
-            const SizedBox(height: 24),
-
-            _SectionWithList(
-              title: 'Para el aderezo',
-              onSeeAll: () {},
-              products: productsFor(ProductCategory.aderezo),
-            ),
-            const SizedBox(height: 24),
-
-            _SectionWithList(
-              title: 'En temporada',
-              onSeeAll: () {},
-              products: productsFor(ProductCategory.temporada),
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
 
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -98,7 +61,80 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
           ),
         ],
       ),
+      
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+  floatingActionButton: Cart.instance.isEmpty
+      ? null
+      : FloatingActionButton.extended(
+          onPressed: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const CartScreen(),
+              ),
+            );
+            setState(() {}); // para actualizar visibilidad cuando vuelves
+          },
+          backgroundColor: const Color(0xFF002C28),
+          icon: const Icon(
+            Icons.shopping_basket_outlined,
+            color: Colors.white,
+          ),
+          label: Text(
+            'Ver canasta (${Cart.instance.items.length})',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
 
+      // por ahora sólo tenemos una pantalla, así que ignoramos _currentIndex
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          children: [
+            Text(
+              'Kuska',
+              style: GoogleFonts.libreBaskerville(
+                fontSize: 40,
+                fontWeight: FontWeight.w700,
+                height: 1.0,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            const _SearchBar(),
+            const SizedBox(height: 28),
+
+            _SectionWithList(
+              title: 'Variedades de papa',
+              onSeeAll: () {},
+              products: productsFor(ProductCategory.papa),
+              onProductTap: _onProductTap,
+              
+            ),
+            const SizedBox(height: 24),
+
+            _SectionWithList(
+              title: 'Para el aderezo',
+              onSeeAll: () {},
+              products: productsFor(ProductCategory.aderezo),
+              onProductTap: _onProductTap,
+            ),
+            const SizedBox(height: 24),
+
+            _SectionWithList(
+              title: 'En temporada',
+              onSeeAll: () {},
+              products: productsFor(ProductCategory.temporada),
+              onProductTap: _onProductTap,
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+
+      
     );
   }
   Widget _buildNavIcon(String assetPath, int index) {
@@ -115,7 +151,15 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
     ),
   );
 }
-
+  Future<void> _onProductTap(Product product) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProductDetailScreen(product: product),
+      ),
+    );
+    // cuando vuelves del detalle, refrescas el FAB
+    setState(() {});
+  }
 }
 
 class _SearchBar extends StatelessWidget {
@@ -143,11 +187,14 @@ class _SectionWithList extends StatelessWidget {
   final String title;
   final VoidCallback onSeeAll;
   final List<Product> products;
+  final void Function(Product) onProductTap;
+
 
   const _SectionWithList({
     required this.title,
     required this.onSeeAll,
     required this.products,
+    required this.onProductTap,
   });
 
   @override
@@ -184,10 +231,13 @@ class _SectionWithList extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: products.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final product = products[index];
-              return _ProductCard(product: product);
+              return _ProductCard(
+                product: product,
+                onTap: () => onProductTap(product),
+              );
             },
           ),
         ),
@@ -198,8 +248,12 @@ class _SectionWithList extends StatelessWidget {
 
 class _ProductCard extends StatelessWidget {
   final Product product;
+  final VoidCallback onTap;
 
-  const _ProductCard({required this.product});
+  const _ProductCard({
+      required this.product,
+      required this.onTap,
+    });
 
   @override
   Widget build(BuildContext context) {
@@ -208,11 +262,7 @@ class _ProductCard extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
         onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => ProductDetailScreen(product: product),
-            ),
-          );
+          onTap();
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
