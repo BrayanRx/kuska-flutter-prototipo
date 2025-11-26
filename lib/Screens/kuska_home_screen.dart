@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'package:kuska_prototipos/product.dart';
 import 'package:kuska_prototipos/Screens/product_detail_screen.dart';
 import 'package:kuska_prototipos/cart.dart';
 import 'package:kuska_prototipos/screens/cart_screen.dart';
-
-
+import 'package:kuska_prototipos/screens/envios_screen.dart';
 
 class KuskaHomeScreen extends StatefulWidget {
   const KuskaHomeScreen({super.key});
@@ -15,19 +15,100 @@ class KuskaHomeScreen extends StatefulWidget {
   State<KuskaHomeScreen> createState() => _KuskaHomeScreenState();
 }
 
-List<Product> productsFor(ProductCategory category) {
-  return mockProducts
-      .where((p) => p.categories.contains(category))
-      .toList();
-}
-
-
 class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
   int _currentIndex = 0;
 
+  // Filtra productos por categoría
+  List<Product> _productsFor(ProductCategory category) {
+    return mockProducts
+        .where((p) => p.categories.contains(category))
+        .toList();
+  }
+
+  Future<void> _onProductTap(Product product) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ProductDetailScreen(product: product),
+      ),
+    );
+    // Al volver, refrescamos el FAB "Ver canasta"
+    setState(() {});
+  }
+
+  Widget _buildNavIcon(String assetPath, int index) {
+    final isActive = _currentIndex == index;
+    const activeColor = Color(0xFFFF8A3C); // naranja
+    final inactiveColor = Colors.grey.shade400;
+
+    return SvgPicture.asset(
+      assetPath,
+      height: 26,
+      colorFilter: ColorFilter.mode(
+        isActive ? activeColor : inactiveColor,
+        BlendMode.srcIn,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Elegimos qué pantalla mostrar según el tab
+    Widget body;
+    switch (_currentIndex) {
+      case 0:
+        body = ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          children: [
+            Text(
+              'Kuska',
+              style: GoogleFonts.libreBaskerville(
+                fontSize: 40,
+                fontWeight: FontWeight.w700,
+                height: 1.0,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const _SearchBar(),
+            const SizedBox(height: 28),
+            _SectionWithList(
+              title: 'Variedades de papa',
+              onSeeAll: () {},
+              products: _productsFor(ProductCategory.papa),
+              onProductTap: _onProductTap,
+            ),
+            const SizedBox(height: 24),
+            _SectionWithList(
+              title: 'Para el aderezo',
+              onSeeAll: () {},
+              products: _productsFor(ProductCategory.aderezo),
+              onProductTap: _onProductTap,
+            ),
+            const SizedBox(height: 24),
+            _SectionWithList(
+              title: 'En temporada',
+              onSeeAll: () {},
+              products: _productsFor(ProductCategory.temporada),
+              onProductTap: _onProductTap,
+            ),
+            const SizedBox(height: 80), // espacio para el FAB
+          ],
+        );
+        break;
+      case 1:
+        body = const EnviosScreen();
+        break;
+      case 2:
+        body = const Center(child: Text('Guardados (pendiente)'));
+        break;
+      case 3:
+      default:
+        body = const Center(child: Text('Perfil (pendiente)'));
+        break;
+    }
+
     return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(child: body),
 
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -61,104 +142,33 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
           ),
         ],
       ),
-      
+
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-  floatingActionButton: Cart.instance.isEmpty
-      ? null
-      : FloatingActionButton.extended(
-          onPressed: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const CartScreen(),
+      floatingActionButton: Cart.instance.isEmpty
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const CartScreen(),
+                  ),
+                );
+                setState(() {}); // actualizar visibilidad al volver
+              },
+              backgroundColor: const Color(0xFF002C28),
+              icon: const Icon(
+                Icons.shopping_basket_outlined,
+                color: Colors.white,
               ),
-            );
-            setState(() {}); // para actualizar visibilidad cuando vuelves
-          },
-          backgroundColor: const Color(0xFF002C28),
-          icon: const Icon(
-            Icons.shopping_basket_outlined,
-            color: Colors.white,
-          ),
-          label: Text(
-            'Ver canasta (${Cart.instance.items.length})',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-
-      // por ahora sólo tenemos una pantalla, así que ignoramos _currentIndex
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          children: [
-            Text(
-              'Kuska',
-              style: GoogleFonts.libreBaskerville(
-                fontSize: 40,
-                fontWeight: FontWeight.w700,
-                height: 1.0,
+              label: Text(
+                'Ver canasta (${Cart.instance.items.length})',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-            const SizedBox(height: 20),
-
-            const _SearchBar(),
-            const SizedBox(height: 28),
-
-            _SectionWithList(
-              title: 'Variedades de papa',
-              onSeeAll: () {},
-              products: productsFor(ProductCategory.papa),
-              onProductTap: _onProductTap,
-              
-            ),
-            const SizedBox(height: 24),
-
-            _SectionWithList(
-              title: 'Para el aderezo',
-              onSeeAll: () {},
-              products: productsFor(ProductCategory.aderezo),
-              onProductTap: _onProductTap,
-            ),
-            const SizedBox(height: 24),
-
-            _SectionWithList(
-              title: 'En temporada',
-              onSeeAll: () {},
-              products: productsFor(ProductCategory.temporada),
-              onProductTap: _onProductTap,
-            ),
-            const SizedBox(height: 12),
-          ],
-        ),
-      ),
-
-      
     );
-  }
-  Widget _buildNavIcon(String assetPath, int index) {
-  final isActive = _currentIndex == index;
-  const activeColor = Color(0xFFFF8A3C); // naranja
-  final inactiveColor = Colors.grey.shade400;
-
-  return SvgPicture.asset(
-    assetPath,
-    height: 26,
-    colorFilter: ColorFilter.mode(
-      isActive ? activeColor : inactiveColor,
-      BlendMode.srcIn,
-    ),
-  );
-}
-  Future<void> _onProductTap(Product product) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ProductDetailScreen(product: product),
-      ),
-    );
-    // cuando vuelves del detalle, refrescas el FAB
-    setState(() {});
   }
 }
 
@@ -189,7 +199,6 @@ class _SectionWithList extends StatelessWidget {
   final List<Product> products;
   final void Function(Product) onProductTap;
 
-
   const _SectionWithList({
     required this.title,
     required this.onSeeAll,
@@ -199,6 +208,8 @@ class _SectionWithList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (products.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -231,7 +242,7 @@ class _SectionWithList extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: products.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final product = products[index];
               return _ProductCard(
@@ -251,9 +262,9 @@ class _ProductCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _ProductCard({
-      required this.product,
-      required this.onTap,
-    });
+    required this.product,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -261,9 +272,7 @@ class _ProductCard extends StatelessWidget {
       width: 190,
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
-        onTap: () {
-          onTap();
-        },
+        onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -316,8 +325,10 @@ class _ProductCard extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF2E7D32),
                       borderRadius: BorderRadius.circular(999),
@@ -349,10 +360,12 @@ class _ProductCard extends StatelessWidget {
             ),
           ],
         ),
-      )
+      ),
     );
   }
 }
+
+// ---- Modal S³ (igual que ya tenías) ----
 
 void showS3Modal(BuildContext context, Product product) {
   showModalBottomSheet(
@@ -388,7 +401,6 @@ class _S3DetailsSheet extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // “handle” arriba
                 Center(
                   child: Container(
                     width: 40,
@@ -400,8 +412,6 @@ class _S3DetailsSheet extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                // S3 grande + score
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -433,17 +443,15 @@ class _S3DetailsSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-
                 const Text(
                   'Este score resume el desempeño del productor en tres dimensiones: ambiental, social y económica.',
                   style: TextStyle(fontSize: 14, height: 1.4),
                 ),
                 const SizedBox(height: 24),
-
                 _S3DimensionCard(
                   title: 'Ambiental',
                   emoji: '🌿',
-                  titleColor: Color(0xFF2E7D32),
+                  titleColor: const Color(0xFF2E7D32),
                   description:
                       'Impacto ambiental y eficiencia operativa',
                   metrics: [
@@ -452,11 +460,10 @@ class _S3DetailsSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-
                 _S3DimensionCard(
                   title: 'Social',
                   emoji: '👥',
-                  titleColor: Color(0xFFB23A48),
+                  titleColor: const Color(0xFFB23A48),
                   description:
                       'Beneficios al productor y prácticas responsables',
                   metrics: [
@@ -466,11 +473,10 @@ class _S3DetailsSheet extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-
                 _S3DimensionCard(
                   title: 'Económico',
                   emoji: '💰',
-                  titleColor: Color(0xFF8C3100),
+                  titleColor: const Color(0xFF8C3100),
                   description:
                       'Estabilidad y transparencia del comercio',
                   metrics: [
