@@ -1,3 +1,4 @@
+// lib/screens/envios_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -10,439 +11,62 @@ class EnviosScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final orders = Cart.instance.orders;
 
+    if (orders.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Center(
+            child: Text(
+              'Aún no tienes envíos.\nConfirma un pedido desde la canasta.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 14, color: Colors.black54),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Kuska',
-                style: GoogleFonts.libreBaskerville(
-                  fontSize: 40,
-                  fontWeight: FontWeight.w700,
-                  height: 1.0,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Mis envíos',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              if (orders.isEmpty)
-                const Expanded(
-                  child: Center(
-                    child: Text(
-                      'Aún no tienes envíos.\nConfirma tu primer pedido desde Inicio.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: orders.length,
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: 16),
-                    itemBuilder: (context, index) {
-                      final order = orders[index];
-                      return _OrderCard(order: order);
-                    },
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OrderCard extends StatelessWidget {
-  final Order order;
-
-  const _OrderCard({required this.order});
-
-  @override
-  Widget build(BuildContext context) {
-    final totalKg = order.items.fold<double>(
-      0,
-      (sum, item) => sum + item.quantityKg,
-    );
-
-    final created = order.createdAt;
-    final dateStr =
-        '${_two(created.day)}/${_two(created.month)}/${created.year.toString().substring(2)}';
-    final hourStr =
-        '${_two(created.hour)}:${_two(created.minute)}';
-
-    final isPending = order.status == OrderStatus.confirmed;
-    final statusText = isPending ? 'pendiente' : 'recibido';
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x22000000),
-            offset: Offset(0, 4),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Fila: ID + estado + Ver detalle
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    _formatOrderId(order.id),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _StatusChip(
-                    text: isPending ? 'PENDIENTE' : 'RECIBIDO',
-                    isPending: isPending,
-                  ),
-                ],
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => OrderDetailScreen(order: order),
-                    ),
-                  );
-                },
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Ver detalle',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              const Icon(
-                Icons.access_time,
-                size: 18,
-                color: Color(0xFF263238),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '$dateStr · $hourStr ($statusText)',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          Row(
-            children: [
-              const Icon(
-                Icons.inventory_2_outlined,
-                size: 18,
-                color: Color(0xFF263238),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '${totalKg.toStringAsFixed(0)} kg',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          Row(
-            children: [
-              const Icon(
-                Icons.payments_outlined,
-                size: 18,
-                color: Color(0xFF263238),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'S/. ${order.total.toStringAsFixed(0)}',
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.black87,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final String text;
-  final bool isPending;
-
-  const _StatusChip({
-    required this.text,
-    required this.isPending,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bgColor = isPending
-        ? const Color(0xFFFFF3CD) // amarillo suave
-        : const Color(0xFFE3F6E6); // verde suave
-
-    final textColor = isPending
-        ? const Color(0xFFB25B00) // naranja oscuro
-        : const Color(0xFF1B5E20); // verde oscuro
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: textColor,
-        ),
-      ),
-    );
-  }
-}
-
-class OrderDetailScreen extends StatelessWidget {
-  final Order order;
-
-  const OrderDetailScreen({super.key, required this.order});
-
-  @override
-  Widget build(BuildContext context) {
-    final totalKg = order.items.fold<double>(
-      0,
-      (sum, item) => sum + item.quantityKg,
-    );
-
-    final created = order.createdAt;
-    final dateStr =
-        '${_two(created.day)}/${_two(created.month)}/${created.year.toString().substring(2)}';
-    final hourStr =
-        '${_two(created.hour)}:${_two(created.minute)}';
-
-    final isPending = order.status == OrderStatus.confirmed;
-    final statusText = isPending ? 'Pendiente' : 'Recibido';
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_formatOrderId(order.id)),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Estado + fecha/hora
-            Row(
-              children: [
-                _StatusChip(
-                  text: isPending ? 'PENDIENTE' : 'RECIBIDO',
-                  isPending: isPending,
+            // Título Kuska (identidad)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Text(
+                'Kuska',
+                style: GoogleFonts.libreBaskerville(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(width: 12),
-                const Icon(Icons.access_time, size: 18),
-                const SizedBox(width: 6),
-                Text(
-                  '$dateStr · $hourStr',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Resumen numérico
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF7F5F3),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Resumen del envío',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.inventory_2_outlined,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${totalKg.toStringAsFixed(1)} kg en total',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.payments_outlined,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'S/. ${order.total.toStringAsFixed(2)}',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.info_outline,
-                        size: 18,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Estado: $statusText',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ],
               ),
             ),
-            const SizedBox(height: 16),
-
-            const Text(
-              'Productos del pedido',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Tablero de envíos',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: Colors.black54,
+                ),
               ),
             ),
             const SizedBox(height: 8),
 
+            // Lista de pedidos
             Expanded(
               child: ListView.separated(
-                itemCount: order.items.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                itemCount: orders.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
-                  final item = order.items[index];
-                  final product = item.product;
-                  final subtotal = item.total;
-
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x11000000),
-                          offset: Offset(0, 2),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.asset(
-                            product.imageUrl,
-                            width: 48,
-                            height: 48,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                product.name,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${item.quantityKg.toStringAsFixed(1)} kg · S/ ${product.pricePerKg.toStringAsFixed(2)} x kg',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'S/ ${subtotal.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
+                  final order = orders[index];
+                  return _OrderCard(
+                    order: order,
+                    index: index,
                   );
                 },
               ),
@@ -454,13 +78,373 @@ class OrderDetailScreen extends StatelessWidget {
   }
 }
 
-// Utils compartidos
+/// Card de pedido estilo “tablero”
+class _OrderCard extends StatelessWidget {
+  final Order order;
+  final int index;
 
+  const _OrderCard({
+    required this.order,
+    required this.index,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final totalKg = order.items.fold<double>(
+      0,
+      (sum, item) => sum + item.quantityKg,
+    );
+    final productsCount = order.items.length;
+
+    // Info de llegada “futura” simulada a partir del índice
+    final deliveryInfo = _computeDeliveryInfo(index);
+
+    final createdAtText = _formatShortDate(order.createdAt);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            offset: Offset(0, 2),
+            blurRadius: 8,
+            color: Color(0x14000000),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Fila superior: ID + badge de estado
+            Row(
+              children: [
+                Text(
+                  _formatOrderId(order.id),
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Spacer(),
+                _StatusBadge(status: order.status),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Llega: fecha + ventana horaria
+            Row(
+              children: [
+                const Icon(Icons.calendar_today_outlined, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Llega: ${deliveryInfo.dateLabel}, ${deliveryInfo.slotRange}',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            // Peso total + número de productos
+            Row(
+              children: [
+                const Icon(Icons.inventory_2_outlined, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  '${totalKg.toStringAsFixed(1)} kg · $productsCount productos',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+
+            // Total S/.
+            Row(
+              children: [
+                const Icon(Icons.payments_outlined, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'S/ ${order.total.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+            const Divider(height: 16),
+
+            // Fila inferior: fecha de pedido + Ver detalle
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Pedido el: $createdAtText',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Colors.black54,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    // Aquí podrías navegar a una pantalla de detalle
+                    // por ahora solo mostramos un mock
+                    showModalBottomSheet(
+                      context: context,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(24)),
+                      ),
+                      builder: (_) =>
+                          _OrderDetailBottomSheet(order: order, info: deliveryInfo),
+                    );
+                  },
+                  child: const Text('Ver detalle'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Badge de estado con colores semánticos
+class _StatusBadge extends StatelessWidget {
+  final OrderStatus status;
+
+  const _StatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    String label;
+    Color bg;
+    Color fg;
+
+    switch (status) {
+      case OrderStatus.confirmed:
+        label = 'Confirmado';
+        bg = const Color(0xFFE5F6F1);
+        fg = const Color(0xFF00A67A); // Kuska green
+        break;
+      case OrderStatus.delivered:
+        label = 'Entregado';
+        bg = const Color(0xFFE8F5E9);
+        fg = const Color(0xFF2E7D32);
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: fg,
+        ),
+      ),
+    );
+  }
+}
+
+/// Info de llegada simulada (hoy / mañana, slot horario)
+class _DeliveryInfo {
+  final DateTime date;
+  final String dateLabel; // "Jue 27 Nov"
+  final String slotRange; // "08:00 - 10:00"
+
+  _DeliveryInfo({
+    required this.date,
+    required this.dateLabel,
+    required this.slotRange,
+  });
+}
+
+/// Para el prototipo: generamos ventanas en función del índice
+/// alternando entre HOY / MAÑANA y los 3 slots (early, pre-service, afternoon).
+_DeliveryInfo _computeDeliveryInfo(int index) {
+  final now = DateTime.now();
+  final baseDay = DateTime(now.year, now.month, now.day);
+
+  // 0 -> hoy, 1 -> mañana
+  final dayOffset = index % 2;
+  final date = baseDay.add(Duration(days: dayOffset));
+
+  // 0,1,2 -> early / pre-service / afternoon
+  final slotIndex = index % 3;
+  late String slotRange;
+  switch (slotIndex) {
+    case 0:
+      slotRange = '05:00 - 07:00 (Early Bird)';
+      break;
+    case 1:
+      slotRange = '08:00 - 10:00 (Pre-Service)';
+      break;
+    default:
+      slotRange = '14:00 - 16:00 (Afternoon)';
+      break;
+  }
+
+  final dateLabel = _formatDeliveryDate(date);
+  return _DeliveryInfo(date: date, dateLabel: dateLabel, slotRange: slotRange);
+}
+
+/// Formatea algo como "Jue 27 Nov"
+String _formatDeliveryDate(DateTime date) {
+  const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const months = [
+    'Ene',
+    'Feb',
+    'Mar',
+    'Abr',
+    'May',
+    'Jun',
+    'Jul',
+    'Ago',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dic'
+  ];
+
+  final wd = weekdays[date.weekday - 1];
+  final m = months[date.month - 1];
+  final d = date.day.toString().padLeft(2, '0');
+  return '$wd $d $m';
+}
+
+/// Fecha corta tipo "26/11/25"
+String _formatShortDate(DateTime date) {
+  final day = date.day.toString().padLeft(2, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  final year = (date.year % 100).toString().padLeft(2, '0');
+  return '$day/$month/$year';
+}
+
+/// Formatea el ID con prefijo PED-
 String _formatOrderId(String rawId) {
-  final suffix = rawId.length <= 4
-      ? rawId
-      : rawId.substring(rawId.length - 4);
+  // Tomamos los últimos 4 dígitos para algo tipo PED-6432
+  final suffix = rawId.length <= 4 ? rawId : rawId.substring(rawId.length - 4);
   return 'PED-$suffix';
 }
 
-String _two(int v) => v.toString().padLeft(2, '0');
+/// BottomSheet simple de detalle de pedido
+class _OrderDetailBottomSheet extends StatelessWidget {
+  final Order order;
+  final _DeliveryInfo info;
+
+  const _OrderDetailBottomSheet({
+    required this.order,
+    required this.info,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final totalKg = order.items.fold<double>(
+      0,
+      (sum, item) => sum + item.quantityKg,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 38,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          Text(
+            _formatOrderId(order.id),
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Llega: ${info.dateLabel}, ${info.slotRange}',
+            style: const TextStyle(fontSize: 13),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${totalKg.toStringAsFixed(1)} kg · ${order.items.length} productos',
+            style: const TextStyle(fontSize: 13),
+          ),
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 8),
+          Text(
+            'Detalle de productos',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          for (final item in order.items) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    '${item.product.name} (${item.quantityKg.toStringAsFixed(1)} kg)',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+                Text(
+                  'S/ ${item.total.toStringAsFixed(2)}',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+          ],
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              'Total: S/ ${order.total.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Pedido creado el: ${_formatShortDate(order.createdAt)}',
+            style: const TextStyle(fontSize: 11, color: Colors.black54),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
