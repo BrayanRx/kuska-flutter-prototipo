@@ -20,11 +20,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   int _selectedDateOffsetDays = 1;
   DeliverySlot _selectedSlot = DeliverySlot.preService;
 
-  double _computeShipping(double subtotal) {
-    // 10% del subtotal, redondeado hacia arriba al sol
-    final raw = subtotal * 0.10;
-    return raw.ceilToDouble();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,13 +38,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       );
     }
 
-    final subtotal = cart.total;
-    final shippingCost = _computeShipping(subtotal);
-    const igvRate = 0.18;
+    final subtotal = cart.subtotal;
+    final shippingCost = cart.shippingFee;
+    final taxableBase = cart.taxableBase;
+    final igv = cart.igv;
+    final totalToPay = cart.finalTotal;
 
-    final taxableBase = subtotal + shippingCost;
-    final igv = taxableBase * igvRate;
-    final totalToPay = taxableBase + igv;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -136,7 +130,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           value: subtotal,
                         ),
                         _PriceRow(
-                          label: 'Costo de envío (10%)',
+                          label: 'Costo de envío',
                           value: shippingCost,
                         ),
                         const Divider(height: 20),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kuska_prototipos/Screens/saved_baskets_screen.dart';
 
 import 'package:kuska_prototipos/product.dart';
 import 'package:kuska_prototipos/Screens/product_detail_screen.dart';
@@ -98,7 +99,7 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
         body = const EnviosScreen();
         break;
       case 2:
-        body = const Center(child: Text('Guardados (pendiente)'));
+        body = const SavedBasketsScreen();
         break;
       case 3:
       default:

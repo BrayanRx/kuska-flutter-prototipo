@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kuska_prototipos/cart.dart';
 import 'package:kuska_prototipos/screens/checkout_screen.dart';
+import 'package:kuska_prototipos/saved_baskets.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -16,6 +17,7 @@ class _CartScreenState extends State<CartScreen> {
   Widget build(BuildContext context) {
     final cart = Cart.instance;
 
+    // ESTADO VACÍO
     if (cart.isEmpty) {
       return Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
@@ -88,6 +90,7 @@ class _CartScreenState extends State<CartScreen> {
       );
     }
 
+    // ESTADO CON ITEMS
     final subtotal = cart.total;
 
     return Scaffold(
@@ -106,6 +109,7 @@ class _CartScreenState extends State<CartScreen> {
       ),
       body: Column(
         children: [
+          // LISTA DE ITEMS
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -198,15 +202,7 @@ class _CartScreenState extends State<CartScreen> {
                     width: double.infinity,
                     height: 42,
                     child: OutlinedButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Guardar canasta (mock): esta canasta se podrá reutilizar desde "Guardados" en una versión futura.',
-                            ),
-                          ),
-                        );
-                      },
+                      onPressed: () => _showSaveBasketDialog(context),
                       style: OutlinedButton.styleFrom(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(24),
@@ -227,6 +223,81 @@ class _CartScreenState extends State<CartScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Dialog para pedir nombre y guardar la canasta
+  void _showSaveBasketDialog(BuildContext context) {
+    final cart = Cart.instance;
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: Text(
+            'Guardar canasta',
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: 'Nombre de la canasta',
+              hintText: 'Ej. Verduras semanales',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final name = controller.text.trim();
+
+                if (name.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Ponle un nombre a la canasta.'),
+                    ),
+                  );
+                  return;
+                }
+
+                try {
+                  SavedBasketsManager.instance.saveBasket(
+                    name: name,
+                    items: cart.items,
+                  );
+
+                  Navigator.of(dialogContext).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Canasta "$name" guardada correctamente.'),
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(e.toString()),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -1,25 +1,28 @@
-// lib/screens/envios_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import 'package:kuska_prototipos/cart.dart';
+import 'package:kuska_prototipos/Screens/order_detail_screen.dart';
 
 class EnviosScreen extends StatelessWidget {
   const EnviosScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final orders = Cart.instance.orders;
+    final cart = Cart.instance;
+    final orders = cart.orders;
 
     if (orders.isEmpty) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF5F5F5),
         body: SafeArea(
           child: Center(
-            child: Text(
-              'Aún no tienes envíos.\nConfirma un pedido desde la canasta.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 14, color: Colors.black54),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'Aún no tienes envíos.\nConfirma tu primera canasta y aparecerá aquí.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(fontSize: 14),
+              ),
             ),
           ),
         ),
@@ -29,119 +32,120 @@ class EnviosScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Título Kuska (identidad)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Text(
-                'Kuska',
-                style: GoogleFonts.libreBaskerville(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          itemCount: orders.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Kuska',
+                  style: GoogleFonts.libreBaskerville(
+                    fontSize: 40,
+                    fontWeight: FontWeight.w700,
+                    height: 1.0,
+                  ),
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'Tablero de envíos',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Colors.black54,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
+              );
+            }
 
-            // Lista de pedidos
-            Expanded(
-              child: ListView.separated(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                itemCount: orders.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final order = orders[index];
-                  return _OrderCard(
-                    order: order,
-                    index: index,
-                  );
-                },
-              ),
-            ),
-          ],
+            final order = orders[index - 1];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _OrderCard(order: order),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-/// Card de pedido estilo “tablero”
 class _OrderCard extends StatelessWidget {
   final Order order;
-  final int index;
 
-  const _OrderCard({
-    required this.order,
-    required this.index,
-  });
+  const _OrderCard({required this.order});
 
   @override
   Widget build(BuildContext context) {
+    final statusStyle = _statusInfo(order.status);
+    final shortId = 'PED-${order.id.substring(order.id.length - 4)}';
+
     final totalKg = order.items.fold<double>(
       0,
       (sum, item) => sum + item.quantityKg,
     );
+
     final productsCount = order.items.length;
 
-    // Info de llegada “futura” simulada a partir del índice
-    final deliveryInfo = _computeDeliveryInfo(index);
+    final arrival = _formatArrival(order.deliveryStart, order.deliveryEnd);
+    final created = _formatCreatedAt(order.createdAt);
 
-    final createdAtText = _formatShortDate(order.createdAt);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            offset: Offset(0, 2),
-            blurRadius: 8,
-            color: Color(0x14000000),
+    return InkWell(
+      borderRadius: BorderRadius.circular(24),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => OrderDetailScreen(order: order),
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(
+              offset: Offset(0, 4),
+              blurRadius: 12,
+              color: Color(0x22000000),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Fila superior: ID + badge de estado
+            // Header: ID + badge
             Row(
               children: [
                 Text(
-                  _formatOrderId(order.id),
+                  shortId,
                   style: GoogleFonts.inter(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
                 const Spacer(),
-                _StatusBadge(status: order.status),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusStyle.background,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    statusStyle.label,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: statusStyle.color,
+                    ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 10),
 
-            // Llega: fecha + ventana horaria
+            // Llega...
             Row(
               children: [
-                const Icon(Icons.calendar_today_outlined, size: 18),
+                const Icon(Icons.event_outlined, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Llega: ${deliveryInfo.dateLabel}, ${deliveryInfo.slotRange}',
+                    'Llega: $arrival',
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -152,20 +156,23 @@ class _OrderCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
 
-            // Peso total + número de productos
+            // Kg + productos
             Row(
               children: [
                 const Icon(Icons.inventory_2_outlined, size: 18),
                 const SizedBox(width: 8),
                 Text(
                   '${totalKg.toStringAsFixed(1)} kg · $productsCount productos',
-                  style: const TextStyle(fontSize: 13),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black87,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 6),
 
-            // Total S/.
+            // Total S/
             Row(
               children: [
                 const Icon(Icons.payments_outlined, size: 18),
@@ -182,35 +189,14 @@ class _OrderCard extends StatelessWidget {
 
             const SizedBox(height: 10),
             const Divider(height: 16),
+            const SizedBox(height: 2),
 
-            // Fila inferior: fecha de pedido + Ver detalle
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Pedido el: $createdAtText',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.black54,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    // Aquí podrías navegar a una pantalla de detalle
-                    // por ahora solo mostramos un mock
-                    showModalBottomSheet(
-                      context: context,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(24)),
-                      ),
-                      builder: (_) =>
-                          _OrderDetailBottomSheet(order: order, info: deliveryInfo),
-                    );
-                  },
-                  child: const Text('Ver detalle'),
-                ),
-              ],
+            Text(
+              'Pedido el: $created',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.black54,
+              ),
             ),
           ],
         ),
@@ -219,93 +205,55 @@ class _OrderCard extends StatelessWidget {
   }
 }
 
-/// Badge de estado con colores semánticos
-class _StatusBadge extends StatelessWidget {
-  final OrderStatus status;
+// --------------------------------------------------------------
+// Helpers de formato / estilo
+// --------------------------------------------------------------
 
-  const _StatusBadge({required this.status});
+class _StatusStyle {
+  final String label;
+  final Color color;
+  final Color background;
 
-  @override
-  Widget build(BuildContext context) {
-    String label;
-    Color bg;
-    Color fg;
-
-    switch (status) {
-      case OrderStatus.confirmed:
-        label = 'Confirmado';
-        bg = const Color(0xFFE5F6F1);
-        fg = const Color(0xFF00A67A); // Kuska green
-        break;
-      case OrderStatus.delivered:
-        label = 'Entregado';
-        bg = const Color(0xFFE8F5E9);
-        fg = const Color(0xFF2E7D32);
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: fg,
-        ),
-      ),
-    );
-  }
-}
-
-/// Info de llegada simulada (hoy / mañana, slot horario)
-class _DeliveryInfo {
-  final DateTime date;
-  final String dateLabel; // "Jue 27 Nov"
-  final String slotRange; // "08:00 - 10:00"
-
-  _DeliveryInfo({
-    required this.date,
-    required this.dateLabel,
-    required this.slotRange,
+  _StatusStyle({
+    required this.label,
+    required this.color,
+    required this.background,
   });
 }
 
-/// Para el prototipo: generamos ventanas en función del índice
-/// alternando entre HOY / MAÑANA y los 3 slots (early, pre-service, afternoon).
-_DeliveryInfo _computeDeliveryInfo(int index) {
-  final now = DateTime.now();
-  final baseDay = DateTime(now.year, now.month, now.day);
-
-  // 0 -> hoy, 1 -> mañana
-  final dayOffset = index % 2;
-  final date = baseDay.add(Duration(days: dayOffset));
-
-  // 0,1,2 -> early / pre-service / afternoon
-  final slotIndex = index % 3;
-  late String slotRange;
-  switch (slotIndex) {
-    case 0:
-      slotRange = '05:00 - 07:00 (Early Bird)';
-      break;
-    case 1:
-      slotRange = '08:00 - 10:00 (Pre-Service)';
-      break;
-    default:
-      slotRange = '14:00 - 16:00 (Afternoon)';
-      break;
+_StatusStyle _statusInfo(OrderStatus status) {
+  switch (status) {
+    case OrderStatus.pending:
+      return _StatusStyle(
+        label: 'PENDIENTE',
+        color: const Color(0xFF8A4A00),
+        background: const Color(0xFFFFF3E0),
+      );
+    case OrderStatus.confirmed:
+    case OrderStatus.inHub:
+      return _StatusStyle(
+        label: 'CONFIRMADO',
+        color: const Color(0xFF005B4A),
+        background: const Color(0xFFE0F2F1),
+      );
+    case OrderStatus.onRoute:
+      return _StatusStyle(
+        label: 'EN RUTA',
+        color: const Color(0xFF4A148C),
+        background: const Color(0xFFF3E5F5),
+      );
+    case OrderStatus.delivered:
+      return _StatusStyle(
+        label: 'ENTREGADO',
+        color: const Color(0xFF1B5E20),
+        background: const Color(0xFFE8F5E9),
+      );
   }
-
-  final dateLabel = _formatDeliveryDate(date);
-  return _DeliveryInfo(date: date, dateLabel: dateLabel, slotRange: slotRange);
 }
 
-/// Formatea algo como "Jue 27 Nov"
-String _formatDeliveryDate(DateTime date) {
+String _twoDigits(int n) => n.toString().padLeft(2, '0');
+
+String _formatArrival(DateTime start, DateTime end) {
   const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
   const months = [
     'Ene',
@@ -316,135 +264,29 @@ String _formatDeliveryDate(DateTime date) {
     'Jun',
     'Jul',
     'Ago',
-    'Sep',
+    'Set',
     'Oct',
     'Nov',
     'Dic'
   ];
 
-  final wd = weekdays[date.weekday - 1];
-  final m = months[date.month - 1];
-  final d = date.day.toString().padLeft(2, '0');
-  return '$wd $d $m';
+  final w = weekdays[start.weekday - 1];
+  final m = months[start.month - 1];
+  final day = start.day;
+
+  final startH = _twoDigits(start.hour);
+  final startM = _twoDigits(start.minute);
+  final endH = _twoDigits(end.hour);
+  final endM = _twoDigits(end.minute);
+
+  return '$w $day $m, $startH:$startM - $endH:$endM';
 }
 
-/// Fecha corta tipo "26/11/25"
-String _formatShortDate(DateTime date) {
-  final day = date.day.toString().padLeft(2, '0');
-  final month = date.month.toString().padLeft(2, '0');
-  final year = (date.year % 100).toString().padLeft(2, '0');
-  return '$day/$month/$year';
-}
-
-/// Formatea el ID con prefijo PED-
-String _formatOrderId(String rawId) {
-  // Tomamos los últimos 4 dígitos para algo tipo PED-6432
-  final suffix = rawId.length <= 4 ? rawId : rawId.substring(rawId.length - 4);
-  return 'PED-$suffix';
-}
-
-/// BottomSheet simple de detalle de pedido
-class _OrderDetailBottomSheet extends StatelessWidget {
-  final Order order;
-  final _DeliveryInfo info;
-
-  const _OrderDetailBottomSheet({
-    required this.order,
-    required this.info,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final totalKg = order.items.fold<double>(
-      0,
-      (sum, item) => sum + item.quantityKg,
-    );
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 38,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(999),
-              ),
-            ),
-          ),
-          Text(
-            _formatOrderId(order.id),
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Llega: ${info.dateLabel}, ${info.slotRange}',
-            style: const TextStyle(fontSize: 13),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${totalKg.toStringAsFixed(1)} kg · ${order.items.length} productos',
-            style: const TextStyle(fontSize: 13),
-          ),
-          const SizedBox(height: 12),
-          const Divider(),
-          const SizedBox(height: 8),
-          Text(
-            'Detalle de productos',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 6),
-          for (final item in order.items) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    '${item.product.name} (${item.quantityKg.toStringAsFixed(1)} kg)',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-                Text(
-                  'S/ ${item.total.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-          ],
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              'Total: S/ ${order.total.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Pedido creado el: ${_formatShortDate(order.createdAt)}',
-            style: const TextStyle(fontSize: 11, color: Colors.black54),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
+String _formatCreatedAt(DateTime dt) {
+  final day = _twoDigits(dt.day);
+  final month = _twoDigits(dt.month);
+  final year = dt.year.toString().substring(2);
+  final hour = _twoDigits(dt.hour);
+  final minute = _twoDigits(dt.minute);
+  return '$day/$month/$year · $hour:$minute';
 }
