@@ -8,6 +8,7 @@ import 'package:kuska_prototipos/Screens/product_detail_screen.dart';
 import 'package:kuska_prototipos/cart.dart';
 import 'package:kuska_prototipos/screens/cart_screen.dart';
 import 'package:kuska_prototipos/screens/envios_screen.dart';
+import 'package:kuska_prototipos/screens/profile_screen.dart';
 
 class KuskaHomeScreen extends StatefulWidget {
   const KuskaHomeScreen({super.key});
@@ -103,7 +104,7 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
         break;
       case 3:
       default:
-        body = const Center(child: Text('Perfil (pendiente)'));
+        body = const ProfileScreen();
         break;
     }
 
