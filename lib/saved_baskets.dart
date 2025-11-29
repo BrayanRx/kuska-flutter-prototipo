@@ -15,6 +15,9 @@ class SavedBasket {
     required List<CartItem> items,
   }) : items = List.unmodifiable(items);
 
+  double get totalEstimated => 
+    items.fold(0, (sum, item) => sum + (item.product.pricePerKg * item.quantityKg));
+    
   /// Subtotal estimado usando los precios actuales del producto.
   double get subtotal =>
       items.fold(0.0, (sum, item) => sum + item.total);
