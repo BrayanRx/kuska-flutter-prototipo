@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-// Importa tus pantallas y modelos
+// --- IMPORTS DE TUS PANTALLAS Y MODELOS ---
 import 'package:kuska_prototipos/Screens/saved_baskets_screen.dart';
 import 'package:kuska_prototipos/product.dart';
 import 'package:kuska_prototipos/Screens/product_detail_screen.dart';
@@ -10,6 +10,9 @@ import 'package:kuska_prototipos/cart.dart';
 import 'package:kuska_prototipos/screens/cart_screen.dart';
 import 'package:kuska_prototipos/screens/envios_screen.dart';
 import 'package:kuska_prototipos/screens/profile_screen.dart';
+
+// --- IMPORT DEL SERVICIO DE IA ---
+import 'package:kuska_prototipos/services/kuska_intelligence.dart'; 
 
 class KuskaHomeScreen extends StatefulWidget {
   const KuskaHomeScreen({super.key});
@@ -31,17 +34,14 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
   final Color _kuskaGreen = const Color(0xFF002C28);
   final Color _bgGrey = const Color(0xFFF5F5F5);
 
-  // LÓGICA DE FILTRADO COMBINADA (Categoría + Texto)
+  // LÓGICA DE FILTRADO COMBINADA
   List<Product> get _filteredProducts {
-    // 1. Empezamos con todos los productos
     List<Product> list = mockProducts;
 
-    // 2. Filtramos por categoría si hay una seleccionada
     if (_selectedCategory != null) {
       list = list.where((p) => p.categories.contains(_selectedCategory)).toList();
     }
 
-    // 3. Filtramos por texto si el usuario escribió algo
     if (_searchQuery.isNotEmpty) {
       list = list.where((p) => 
         p.name.toLowerCase().contains(_searchQuery.toLowerCase())
@@ -64,6 +64,177 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
       ),
     );
     setState(() {}); 
+  }
+
+  // --- LÓGICA DEL MODAL DE INTELIGENCIA ARTIFICIAL (OPTIMIZADA) ---
+  void _showKuskaIntelligenceModal(BuildContext context) {
+    final TextEditingController promptController = TextEditingController();
+    final service = KuskaIntelligenceService(); 
+    
+    // Variable de estado local para el modal
+    bool isLoading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Importante para que el teclado empuje el contenido
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        // Usamos StatefulBuilder para manejar el loading interno sin reconstruir toda la pantalla
+        return StatefulBuilder(
+          builder: (modalContext, setModalState) {
+            // Padding dinámico basado en el teclado (viewInsets)
+            final keyboardPadding = MediaQuery.of(modalContext).viewInsets.bottom;
+
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: keyboardPadding, // Empuja el contenido
+                left: 24, 
+                right: 24, 
+                top: 24
+              ),
+              child: SingleChildScrollView( // Evita overflow si el teclado es muy alto
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header del Modal
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: _kuskaGreen.withValues(alpha: 0.1),
+                            shape: BoxShape.circle
+                          ),
+                          child: Icon(Icons.auto_awesome, color: _kuskaGreen),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Kuska Intelligence',
+                            style: GoogleFonts.inter(
+                              fontSize: 18, 
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(modalContext),
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Soy tu Jefe de Logística IA. Dime qué vas a cocinar y yo calcularé los insumos.',
+                      style: GoogleFonts.inter(color: Colors.grey[600], fontSize: 14),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Input de Texto
+                    TextField(
+                      controller: promptController,
+                      maxLines: 3,
+                      autofocus: true, // Abre el teclado automáticamente
+                      style: GoogleFonts.inter(),
+                      decoration: InputDecoration(
+                        hintText: 'Ej: "Tengo un evento para 100 personas. Serviré Causa Limeña y Seco de Res. Calcula lo que necesito."',
+                        hintStyle: TextStyle(color: Colors.grey[400]),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[100],
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Botón de Acción
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : () async {
+                          if (promptController.text.trim().isEmpty) return;
+
+                          // 1. CERRAR EL TECLADO PRIMERO (Evita lag y bugs visuales)
+                          FocusScope.of(modalContext).unfocus();
+                          
+                          // Pequeña espera para que la animación del teclado termine antes de cargar
+                          await Future.delayed(const Duration(milliseconds: 200));
+
+                          setModalState(() => isLoading = true);
+                          
+                          // 2. LLAMADA A GEMINI
+                          final success = await service.executeOrder(promptController.text);
+                          
+                          // Verificamos si el widget sigue vivo antes de usar context
+                          if (!modalContext.mounted) return;
+
+                          setModalState(() => isLoading = false);
+
+                          if (success) {
+                            // 3. CERRAR EL MODAL
+                            Navigator.of(modalContext).pop(); 
+                            
+                            // 4. IR AL CARRITO
+                            if (context.mounted) { // Usamos el context padre
+                              await Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const CartScreen()),
+                              );
+                              setState(() {}); // Actualizar badge del carrito al volver
+                            }
+
+                            // Feedback
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text('¡Pedido generado! (Cantidades ajustadas al mínimo mayorista)'),
+                                  backgroundColor: _kuskaGreen,
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          } else {
+                             ScaffoldMessenger.of(modalContext).showSnackBar(
+                              const SnackBar(content: Text('No pudimos procesar el pedido. Intenta ser más específico.')),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _kuskaGreen,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        child: isLoading 
+                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.shutter_speed, size: 20),
+                                const SizedBox(width: 8),
+                                Text('Generar Pedido Mágico', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
+                              ],
+                            ),
+                      ),
+                    ),
+                    const SizedBox(height: 32), // Margen inferior seguro
+                  ],
+                ),
+              ),
+            );
+          }
+        );
+      },
+    );
   }
 
   Widget _buildNavIcon(String assetPath, int index) {
@@ -107,7 +278,11 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, -5)),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5)
+            ),
           ]
         ),
         child: BottomNavigationBar(
@@ -172,6 +347,7 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // HEADER
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -201,19 +377,48 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
               ),
               const SizedBox(height: 16),
               
-              // PASO EL CONTROLADOR Y LA FUNCIÓN DE CAMBIO AL WIDGET DEL BUSCADOR
-              _SearchBarModern(
-                controller: _searchController,
-                onChanged: (val) {
-                  setState(() {
-                    _searchQuery = val;
-                  });
-                },
+              // BARRA DE BÚSQUEDA + BOTÓN IA
+              Row(
+                children: [
+                  Expanded(
+                    child: _SearchBarModern(
+                      controller: _searchController,
+                      onChanged: (val) {
+                        setState(() {
+                          _searchQuery = val;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // --- BOTÓN KUSKA INTELLIGENCE ---
+                  Container(
+                    height: 48,
+                    width: 48,
+                    decoration: BoxDecoration(
+                      color: _kuskaGreen,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _kuskaGreen.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4)
+                        )
+                      ]
+                    ),
+                    child: IconButton(
+                      onPressed: () => _showKuskaIntelligenceModal(context),
+                      icon: const Icon(Icons.auto_awesome, color: Colors.white),
+                      tooltip: 'Kuska Intelligence',
+                    ),
+                  )
+                ],
               ),
             ],
           ),
         ),
 
+        // CATEGORÍAS
         Container(
           height: 50,
           margin: const EdgeInsets.only(bottom: 8),
@@ -248,6 +453,7 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
           ),
         ),
 
+        // GRILLA DE PRODUCTOS
         Expanded(
           child: _filteredProducts.isEmpty
               ? Center(
@@ -264,11 +470,10 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
                   ),
                 )
               : GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100), 
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    // AJUSTE CLAVE: Relación de aspecto un poco más alta para que quepa todo
-                    childAspectRatio: 0.70, 
+                    childAspectRatio: 0.68, 
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
@@ -287,7 +492,7 @@ class _KuskaHomeScreenState extends State<KuskaHomeScreen> {
   }
 }
 
-// --- WIDGETS ACTUALIZADOS ---
+// --- WIDGETS COMPONENTES ---
 
 class _SearchBarModern extends StatelessWidget {
   final TextEditingController? controller;
@@ -303,7 +508,11 @@ class _SearchBarModern extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2)
+          )
         ]
       ),
       child: TextField(
@@ -311,10 +520,9 @@ class _SearchBarModern extends StatelessWidget {
         onChanged: onChanged,
         textAlignVertical: TextAlignVertical.center,
         decoration: InputDecoration(
-          hintText: 'Buscar insumos (ej. Papa Huayro)',
+          hintText: 'Buscar insumos...',
           hintStyle: GoogleFonts.inter(color: Colors.grey[400], fontSize: 14),
           prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 22),
-          // Botón para borrar texto si hay contenido
           suffixIcon: controller?.text.isNotEmpty == true 
             ? IconButton(
                 icon: const Icon(Icons.close, size: 18, color: Colors.grey),
@@ -360,7 +568,13 @@ class _CategoryChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           border: Border.all(color: borderColor),
           boxShadow: isSelected 
-            ? [BoxShadow(color: const Color(0xFF002C28).withOpacity(0.2), blurRadius: 4, offset: const Offset(0, 2))]
+            ? [
+                BoxShadow(
+                  color: const Color(0xFF002C28).withValues(alpha: 0.2),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2)
+                )
+              ]
             : [],
         ),
         child: Text(
@@ -376,6 +590,7 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
+// --- PRODUCT GRID CARD ACTUALIZADA CON LÓGICA DE TENDENCIAS REAL ---
 class _ProductGridCard extends StatelessWidget {
   final Product product;
   final VoidCallback onTap;
@@ -384,6 +599,40 @@ class _ProductGridCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Lógica real basada en el enum PriceTrend
+    final trend = product.trend;
+    
+    // Configuración visual según tendencia
+    Color trendBg;
+    Color trendBorder;
+    Color trendText;
+    IconData trendIcon;
+    String trendLabel;
+
+    switch (trend) {
+      case PriceTrend.rising:
+        trendBg = Colors.red.shade50;
+        trendBorder = Colors.red.shade100;
+        trendText = Colors.red.shade700;
+        trendIcon = Icons.trending_up;
+        trendLabel = 'Sube pronto';
+        break;
+      case PriceTrend.falling:
+        trendBg = Colors.green.shade50;
+        trendBorder = Colors.green.shade100;
+        trendText = Colors.green.shade700;
+        trendIcon = Icons.trending_down;
+        trendLabel = 'Baja pronto';
+        break;
+      case PriceTrend.stable:
+        trendBg = Colors.blue.shade50;
+        trendBorder = Colors.blue.shade100;
+        trendText = Colors.blue.shade700;
+        trendIcon = Icons.trending_flat;
+        trendLabel = 'Estable';
+        break;
+    }
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -391,16 +640,19 @@ class _ProductGridCard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2)
+            )
           ]
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // IMAGEN ESTABILIZADA
-            // Usamos AspectRatio 4:3 para obligar a un rectángulo perfecto
+            // IMAGEN
             AspectRatio(
-              aspectRatio: 4 / 3, // Puedes cambiar a 1.0 para cuadrado
+              aspectRatio: 4 / 3, 
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -408,7 +660,7 @@ class _ProductGridCard extends StatelessWidget {
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                     child: Image.asset(
                       product.imageUrl,
-                      fit: BoxFit.cover, // ESTO ES CLAVE: Recorta la imagen para llenar el hueco sin deformar
+                      fit: BoxFit.cover,
                       width: double.infinity,
                     ),
                   ),
@@ -419,7 +671,7 @@ class _ProductGridCard extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
+                        color: Colors.white.withValues(alpha: 0.95),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -439,13 +691,13 @@ class _ProductGridCard extends StatelessWidget {
               ),
             ),
             
-            // Info
-            Expanded( // Usamos Expanded para que ocupe el resto del espacio disponible
+            // INFO
+            Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Distribuye el espacio verticalmente
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -477,17 +729,50 @@ class _ProductGridCard extends StatelessWidget {
                             ),
                           ],
                         ),
+                        const SizedBox(height: 6),
+                        
+                        // INDICADOR DE TENDENCIA (CONECTADO AL ENUM)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: trendBg,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: trendBorder)
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                trendIcon,
+                                size: 12,
+                                color: trendText,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                trendLabel,
+                                style: GoogleFonts.inter(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w500,
+                                  color: trendText,
+                                ),
+                              )
+                            ],
+                          ),
+                        )
                       ],
                     ),
+                    
                     // Badge de pedido mínimo
                     Container(
+                      width: double.infinity,
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.grey[100],
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        'Pedido mín: ${product.minOrderKg.toStringAsFixed(0)}kg',
+                        'Mín: ${product.minOrderKg.toStringAsFixed(0)}kg',
+                        textAlign: TextAlign.center,
                         style: GoogleFonts.inter(fontSize: 10, color: Colors.grey[700]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,

@@ -281,7 +281,7 @@ class _DeliverySection extends StatelessWidget {
     final tomorrow = today.add(const Duration(days: 1));
     final dayAfterTomorrow = today.add(const Duration(days: 2));
 
-    String _slotTitle(DeliverySlot slot) {
+    String slotTitle(DeliverySlot slot) {
       switch (slot) {
         case DeliverySlot.earlyBird:
           return 'Early Bird';
@@ -292,7 +292,7 @@ class _DeliverySection extends StatelessWidget {
       }
     }
 
-    String _slotRange(DeliverySlot slot) {
+    String slotRange(DeliverySlot slot) {
       switch (slot) {
         case DeliverySlot.earlyBird:
           return '05:00 – 07:00';
@@ -449,7 +449,7 @@ class _DeliverySection extends StatelessWidget {
                   child: Text(
                     'Entrega estimada: '
                     '${_weekdayShort(selectedDate)} ${selectedDate.day}/${selectedDate.month}, '
-                    '${_slotTitle(selectedSlot)} (${_slotRange(selectedSlot)})',
+                    '${slotTitle(selectedSlot)} (${slotRange(selectedSlot)})',
                     style: const TextStyle(
                       fontSize: 11,
                       color: Colors.black87,

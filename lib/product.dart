@@ -1,10 +1,17 @@
 enum ProductCategory {
-    papa,
-    aderezo,
-    temporada,
-    oferta,
-    destacado,
-  }
+  papa,
+  aderezo,
+  temporada,
+  oferta,
+  destacado,
+}
+
+// NUEVO: Definimos los tipos de tendencia posibles
+enum PriceTrend {
+  rising,   // Sube (Escasez)
+  falling,  // Baja (Cosecha masiva)
+  stable,   // Estable (Normal)
+}
 
 class Product {
   final String name;
@@ -13,23 +20,23 @@ class Product {
   final double rating;
 
   // Métricas del score Ambiental
-  final double mermasEvitadas;      // en %
-  final double co2KgPorKg;          // en kg CO2 por kg transportado
+  final double mermasEvitadas;
+  final double co2KgPorKg;
 
   // Métricas del score Social
-  final double pagoDirecto;         // en %
-  final double tiempoPromedioPago;  // en horas
-  final double tiempoEntrega;       // en horas
+  final double pagoDirecto;
+  final double tiempoPromedioPago;
+  final double tiempoEntrega;
 
   // Métricas del score Económico
-  final double puntualidad;         // en %
+  final double puntualidad;
 
   final List<ProductCategory> categories;
-
-  /// Mínimo de kg por pedido para este producto
   final double minOrderKg;
+  
+  // NUEVO: La tendencia del producto
+  final PriceTrend trend;
 
-  // Constructor
   const Product({
     required this.name,
     required this.imageUrl,
@@ -43,29 +50,27 @@ class Product {
     required this.puntualidad,
     required this.categories,
     required this.minOrderKg,
+    this.trend = PriceTrend.stable, // Valor por defecto
   });
 
-  /// 0–5 ENV score
+  // Getters para scores (igual que antes)
   double get envScore {
     final mermas = normalize(mermasEvitadas, best: 30, worst: 0);
     final co2 = normalize(co2KgPorKg, best: 0.3, worst: 2.0, inverse: true);
     return (mermas + co2) / 2;
   }
 
-  /// 0–5 SOCIAL score
   double get socialScore {
     final pago = normalize(pagoDirecto, best: 90, worst: 30);
     final pagoTiempo = normalize(tiempoPromedioPago, best: 24, worst: 120, inverse: true);
     final entrega = normalize(tiempoEntrega, best: 24, worst: 48, inverse: true);
-    return (3*pago + pagoTiempo + 2*entrega) / 6;
+    return (3 * pago + pagoTiempo + 2 * entrega) / 6;
   }
 
-  /// 0–5 ECONÓMICO score
   double get economicScore {
     return normalize(puntualidad, best: 100, worst: 60);
   }
 
-  /// Score global
   double get s3Score {
     const wEnv = 0.4;
     const wSoc = 0.3;
@@ -74,7 +79,6 @@ class Product {
   }
 }
 
-/// Normalizador genérico: convierte métrica al rango 1–5
 double normalize(double raw, {
   required double best,
   required double worst,
@@ -90,6 +94,8 @@ double normalize(double raw, {
   return 3 + 2 * t;
 }
 
+// --- DATOS MOCK ACTUALIZADOS CON TENDENCIAS ---
+
 const mockProducts = <Product>[
   Product(
     name: 'Papa amarilla',
@@ -102,10 +108,9 @@ const mockProducts = <Product>[
     tiempoPromedioPago: 36,
     tiempoEntrega: 20,
     puntualidad: 94,
-    categories: [
-      ProductCategory.papa,
-      ProductCategory.destacado,],
-      minOrderKg: 20,
+    categories: [ProductCategory.papa, ProductCategory.destacado],
+    minOrderKg: 5,
+    trend: PriceTrend.rising, // La papa sube (Escasez)
   ),
   Product(
     name: 'Papa Huayro',
@@ -118,12 +123,10 @@ const mockProducts = <Product>[
     tiempoPromedioPago: 48,
     tiempoEntrega: 24,
     puntualidad: 96,
-    categories: [
-      ProductCategory.papa,
-    ],
-    minOrderKg: 15,
+    categories: [ProductCategory.papa],
+    minOrderKg: 5,
+    trend: PriceTrend.stable, // Huayro estable
   ),
-
   Product(
     name: 'Mango',
     imageUrl: 'assets/products/mango.png',
@@ -135,12 +138,10 @@ const mockProducts = <Product>[
     tiempoPromedioPago: 24,
     tiempoEntrega: 24,
     puntualidad: 95,
-    categories: [
-      ProductCategory.temporada,
-    ],
-    minOrderKg: 10,
+    categories: [ProductCategory.temporada],
+    minOrderKg: 2,
+    trend: PriceTrend.falling, // Mango baja (Entra temporada)
   ),
-
   Product(
     name: 'Ajo entero',
     imageUrl: 'assets/products/ajo-entero.png',
@@ -152,32 +153,25 @@ const mockProducts = <Product>[
     tiempoPromedioPago: 24,
     tiempoEntrega: 48,
     puntualidad: 98,
-    categories: [
-      ProductCategory.aderezo,
-    ],
-    minOrderKg: 5,
+    categories: [ProductCategory.aderezo],
+    minOrderKg: 1,
+    trend: PriceTrend.rising, // Ajo sube
   ),
-
-  // 🔥 Ají amarillo
   Product(
     name: 'Ají amarillo',
     imageUrl: 'assets/products/aji-amarillo.png',
     pricePerKg: 1.00,
     rating: 4.5,
-    mermasEvitadas: 20,    // buen manejo postcosecha
-    co2KgPorKg: 0.9,       // algo más alto que la papa pero aceptable
+    mermasEvitadas: 20,
+    co2KgPorKg: 0.9,
     pagoDirecto: 75,
     tiempoPromedioPago: 48,
     tiempoEntrega: 22,
     puntualidad: 92,
-    categories: [
-      ProductCategory.aderezo,
-      ProductCategory.temporada,
-    ],
-    minOrderKg: 8,
+    categories: [ProductCategory.aderezo, ProductCategory.temporada],
+    minOrderKg: 1,
+    trend: PriceTrend.falling, // Ají baja
   ),
-
-  // 🧅 Cebolla roja
   Product(
     name: 'Cebolla roja',
     imageUrl: 'assets/products/cebolla-roja.png',
@@ -189,11 +183,77 @@ const mockProducts = <Product>[
     tiempoPromedioPago: 60,
     tiempoEntrega: 24,
     puntualidad: 90,
-    categories: [
-      ProductCategory.aderezo,
-    ],
-    minOrderKg: 12,
+    categories: [ProductCategory.aderezo],
+    minOrderKg: 3,
+    trend: PriceTrend.stable, // Cebolla estable
   ),
 
-  
+  // 🍋 Limón Sutil (El "Dolor de cabeza" de los restaurantes)
+  Product(
+    name: 'Limón Sutil',
+    imageUrl: 'assets/products/limon-sutil.png', // Asegúrate de tener una imagen o usa un placeholder
+    pricePerKg: 5.50,
+    rating: 4.9,
+    mermasEvitadas: 25,
+    co2KgPorKg: 0.6,
+    pagoDirecto: 85,       // Alto impacto social en Piura/Olmos
+    tiempoPromedioPago: 24,
+    tiempoEntrega: 18,
+    puntualidad: 98,
+    categories: [ProductCategory.temporada, ProductCategory.destacado],
+    minOrderKg: 1,        // Pedido mínimo alto por rotación
+    trend: PriceTrend.rising, // ¡Alerta! El limón está subiendo
+  ),
+
+  // 🥑 Palta Fuerte (Oportunidad de compra)
+  Product(
+    name: 'Palta Fuerte',
+    imageUrl: 'assets/products/palta-fuerte.png',
+    pricePerKg: 4.90,
+    rating: 4.7,
+    mermasEvitadas: 15,    // Producto delicado
+    co2KgPorKg: 1.1,
+    pagoDirecto: 80,
+    tiempoPromedioPago: 48,
+    tiempoEntrega: 24,
+    puntualidad: 95,
+    categories: [ProductCategory.temporada, ProductCategory.destacado],
+    minOrderKg: 2,
+    trend: PriceTrend.falling, // ¡Bajada de precio! Buen momento para causas
+  ),
+
+  // 🌶️ Ají Panca (Básico para aderezos/anticuchos)
+  Product(
+    name: 'Ají Panca',
+    imageUrl: 'assets/products/aji-panca.png',
+    pricePerKg: 3.50,
+    rating: 4.4,
+    mermasEvitadas: 28,    // Muy resistente
+    co2KgPorKg: 0.5,
+    pagoDirecto: 65,
+    tiempoPromedioPago: 60,
+    tiempoEntrega: 48,
+    puntualidad: 90,
+    categories: [ProductCategory.aderezo],
+    minOrderKg: 1,
+    trend: PriceTrend.stable,
+  ),
+
+  // 🍠 Camote Amarillo (Guarnición económica)
+  Product(
+    name: 'Camote Amarillo',
+    imageUrl: 'assets/products/camote.png',
+    pricePerKg: 1.20,
+    rating: 4.3,
+    mermasEvitadas: 12,
+    co2KgPorKg: 0.4,
+    pagoDirecto: 60,
+    tiempoPromedioPago: 36,
+    tiempoEntrega: 24,
+    puntualidad: 88,
+    categories: [ProductCategory.oferta, ProductCategory.temporada],
+    minOrderKg: 2,        // Se mueve por volumen
+    trend: PriceTrend.stable,
+  ),
 ];
+
